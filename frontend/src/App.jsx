@@ -15,11 +15,11 @@ import "./App.css";
 const API_BASE = "http://localhost:3001/api";
 
 const LEAGUES = [
-  { id: 39, name: "Premier League", color: "#37003c" },
-  { id: 140, name: "La Liga", color: "#ffb300" },
-  { id: 78, name: "Bundesliga", color: "#d50000" },
-  { id: 135, name: "Serie A", color: "#0066cc" },
-  { id: 61, name: "Ligue 1", color: "#0055a0" },
+  { id: 39, name: "Premier League", color: "#2563EB" },
+  { id: 140, name: "La Liga", color: "#EA580C" },
+  { id: 78, name: "Bundesliga", color: "#DC2626" },
+  { id: 135, name: "Serie A", color: "#059669" },
+  { id: 61, name: "Ligue 1", color: "#7C3AED" },
 ];
 
 function App() {
@@ -32,6 +32,10 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [darkMode, setDarkMode] = useState(true);
+  const [rankings, setRankings] = useState([]);
+  const [wcMatches, setWcMatches] = useState([]);
+  const [groupsData, setGroupsData] = useState({});
+  const [topScorers, setTopScorers] = useState([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -50,14 +54,39 @@ function App() {
           setMatches(res.data);
         }
       } catch (err) {
-        console.error(err);
-        setError("Failed to load data. Is the backend running?");
+        setError("Failed to load data");
       } finally {
         setLoading(false);
       }
     };
     fetchData();
   }, [activeTab, selectedLeague]);
+
+  useEffect(() => {
+    if (activeTab === "international") {
+      const fetchInternationalData = async () => {
+        setLoading(true);
+        try {
+          const [rankingsRes, matchesRes, groupsRes, scorersRes] =
+            await Promise.all([
+              axios.get(`${API_BASE}/fifa-rankings?limit=20`),
+              axios.get(`${API_BASE}/world-cup/matches`),
+              axios.get(`${API_BASE}/world-cup/groups`),
+              axios.get(`${API_BASE}/world-cup/top-scorers`),
+            ]);
+          setRankings(rankingsRes.data);
+          setWcMatches(matchesRes.data);
+          setGroupsData(groupsRes.data);
+          setTopScorers(scorersRes.data);
+        } catch (err) {
+          setError("Failed to load international data");
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchInternationalData();
+    }
+  }, [activeTab]);
 
   const handleAskAI = async () => {
     if (!chatQuestion.trim()) return;
@@ -70,8 +99,7 @@ function App() {
       });
       setChatAnswer(res.data.answer || res.data.reply || "No answer received.");
     } catch (err) {
-      console.error(err);
-      setError("AI agent temporarily unavailable. Please try again.");
+      setError("AI agent temporarily unavailable");
     } finally {
       setLoading(false);
     }
@@ -84,12 +112,9 @@ function App() {
 
   return (
     <div className={`app ${darkMode ? "dark" : "light"}`}>
-      <div className="bg-pattern"></div>
       <div className="container">
         <header>
-          <h1>
-            <span className="icon">⚽</span> Football Analyst Dashboard
-          </h1>
+          <h1>Football Analyst</h1>
           <button
             className="theme-toggle"
             onClick={() => setDarkMode(!darkMode)}
@@ -98,20 +123,16 @@ function App() {
           </button>
         </header>
 
-        <div className="league-selector">
-          <label>🏆 Select League</label>
-          <div className="league-buttons">
-            {LEAGUES.map((league) => (
-              <button
-                key={league.id}
-                className={`league-btn ${selectedLeague.id === league.id ? "active" : ""}`}
-                style={{ borderBottomColor: league.color }}
-                onClick={() => setSelectedLeague(league)}
-              >
-                {league.name}
-              </button>
-            ))}
-          </div>
+        <div className="league-bar">
+          {LEAGUES.map((league) => (
+            <button
+              key={league.id}
+              className={`league-btn ${selectedLeague.id === league.id ? "active" : ""}`}
+              onClick={() => setSelectedLeague(league)}
+            >
+              {league.name}
+            </button>
+          ))}
         </div>
 
         <div className="tabs">
@@ -119,85 +140,76 @@ function App() {
             className={activeTab === "standings" ? "active" : ""}
             onClick={() => setActiveTab("standings")}
           >
-            📊 Standings
+            Standings
           </button>
           <button
             className={activeTab === "matches" ? "active" : ""}
             onClick={() => setActiveTab("matches")}
           >
-            🗓️ Matches
+            Matches
           </button>
           <button
             className={activeTab === "chat" ? "active" : ""}
             onClick={() => setActiveTab("chat")}
           >
-            🤖 AI Analyst
+            AI Analyst
+          </button>
+          <button
+            className={activeTab === "international" ? "active" : ""}
+            onClick={() => setActiveTab("international")}
+          >
+            World Cup
           </button>
         </div>
 
         <div className="content">
-          {loading && !error && (
-            <div className="loader">
-              <div className="spinner"></div>
-              <p>Loading data...</p>
-            </div>
-          )}
-          {error && <div className="error-message">{error}</div>}
+          {loading && <div className="loader">Loading...</div>}
+          {error && <div className="error">{error}</div>}
 
           {!loading && !error && activeTab === "standings" && (
-            <div className="standings">
-              <h2>{selectedLeague.name} Table</h2>
-              <div className="table-container">
+            <div className="standings-panel">
+              <h2>{selectedLeague.name}</h2>
+              <div className="table-responsive">
                 <table>
                   <thead>
                     <tr>
-                      <th>#</th>
+                      <th>Pos</th>
                       <th>Team</th>
-                      <th>Pts</th>
                       <th>Pld</th>
                       <th>GF</th>
                       <th>GA</th>
                       <th>GD</th>
+                      <th>Pts</th>
                     </tr>
                   </thead>
                   <tbody>
                     {standings.map((team) => (
                       <tr key={team.team_id}>
-                        <td className="rank">{team.rank}</td>
-                        <td className="team-name">{team.team_name}</td>
-                        <td className="points">{team.points}</td>
+                        <td>{team.rank}</td>
+                        <td>{team.team_name}</td>
                         <td>{team.played}</td>
                         <td>{team.goals_for}</td>
                         <td>{team.goals_against}</td>
-                        <td className="gd">
-                          {team.goals_for - team.goals_against}
-                        </td>
+                        <td>{team.goals_for - team.goals_against}</td>
+                        <td className="pts">{team.points}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
               {standings.length > 0 && (
-                <div className="chart-container">
-                  <h3>📈 Top 5 Teams by Points</h3>
-                  <ResponsiveContainer width="100%" height={300}>
+                <div className="chart">
+                  <h3>Top 5 Teams</h3>
+                  <ResponsiveContainer width="100%" height={280}>
                     <BarChart data={chartData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#444" />
-                      <XAxis
-                        dataKey="name"
-                        tick={{ fill: darkMode ? "#ccc" : "#333" }}
-                      />
-                      <YAxis tick={{ fill: darkMode ? "#ccc" : "#333" }} />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: darkMode ? "#1e1e2f" : "#fff",
-                          border: "none",
-                        }}
-                      />
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" />
+                      <YAxis />
+                      <Tooltip />
                       <Bar
                         dataKey="points"
                         fill={selectedLeague.color}
-                        radius={[8, 8, 0, 0]}
+                        radius={[4, 4, 0, 0]}
                       />
                     </BarChart>
                   </ResponsiveContainer>
@@ -207,57 +219,96 @@ function App() {
           )}
 
           {!loading && !error && activeTab === "matches" && (
-            <div className="matches">
-              <h2>{selectedLeague.name} – Recent & Upcoming</h2>
-              {matches.length === 0 ? (
-                <p className="empty-state">No matches found for this league.</p>
-              ) : (
-                <div className="matches-grid">
-                  {matches.map((match) => (
-                    <div className="match-card" key={match.id}>
-                      <div className="match-date">{match.match_date}</div>
-                      <div className="match-teams">
-                        <span className="team home">
-                          {match.home_team_name}
-                        </span>
-                        <span className="score">
-                          {match.home_score ?? "?"} – {match.away_score ?? "?"}
-                        </span>
-                        <span className="team away">
-                          {match.away_team_name}
-                        </span>
-                      </div>
-                      <div className="match-status">{match.status}</div>
+            <div className="matches-panel">
+              <h2>{selectedLeague.name}</h2>
+              <div className="matches-list">
+                {matches.map((match) => (
+                  <div className="match" key={match.id}>
+                    <div className="match-date">{match.match_date}</div>
+                    <div className="match-teams">
+                      <span>{match.home_team_name}</span>
+                      <span className="score">
+                        {match.home_score ?? "?"} - {match.away_score ?? "?"}
+                      </span>
+                      <span>{match.away_team_name}</span>
                     </div>
-                  ))}
-                </div>
-              )}
+                    <div className="match-status">{match.status}</div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
           {!loading && !error && activeTab === "chat" && (
-            <div className="chat">
-              <h2>🤖 Ask the AI Football Analyst</h2>
-              <div className="chat-container">
-                <div className="chat-input-area">
-                  <input
-                    type="text"
-                    value={chatQuestion}
-                    onChange={(e) => setChatQuestion(e.target.value)}
-                    placeholder="e.g., Who has the best attack in La Liga?"
-                    disabled={loading}
-                    onKeyPress={(e) => e.key === "Enter" && handleAskAI()}
-                  />
-                  <button onClick={handleAskAI} disabled={loading}>
-                    {loading ? "Thinking..." : "Ask"}
-                  </button>
+            <div className="chat-panel">
+              <h2>AI Football Analyst</h2>
+              <div className="chat-area">
+                <input
+                  type="text"
+                  value={chatQuestion}
+                  onChange={(e) => setChatQuestion(e.target.value)}
+                  placeholder="Ask a question..."
+                  onKeyPress={(e) => e.key === "Enter" && handleAskAI()}
+                  disabled={loading}
+                />
+                <button onClick={handleAskAI} disabled={loading}>
+                  Send
+                </button>
+              </div>
+              {chatAnswer && <div className="chat-answer">{chatAnswer}</div>}
+            </div>
+          )}
+
+          {!loading && !error && activeTab === "international" && (
+            <div className="international-panel">
+              <h2>World Cup 2026</h2>
+
+              <div className="groups">
+                <h3>Group Standings</h3>
+                <div className="groups-grid">
+                  {Object.entries(groupsData).map(([group, teams]) => (
+                    <div className="group" key={group}>
+                      <h4>Group {group}</h4>
+                      <table>
+                        <tbody>
+                          {teams.map((team) => (
+                            <tr key={team.team_id}>
+                              <td>{team.team_name}</td>
+                              <td>{team.points}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ))}
                 </div>
-                {chatAnswer && (
-                  <div className="chat-bubble">
-                    <div className="bubble-avatar">🤖</div>
-                    <div className="bubble-text">{chatAnswer}</div>
-                  </div>
-                )}
+              </div>
+
+              <div className="rankings">
+                <h3>FIFA Rankings</h3>
+                <div className="rankings-list">
+                  {rankings.slice(0, 10).map((team) => (
+                    <div className="ranking" key={team.id}>
+                      <span>{team.fifa_ranking}</span>
+                      <span>{team.name}</span>
+                      <span>{team.ranking_points}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="scorers">
+                <h3>Golden Boot</h3>
+                <div className="scorers-list">
+                  {topScorers.slice(0, 5).map((scorer, idx) => (
+                    <div className="scorer" key={idx}>
+                      <span>{idx + 1}</span>
+                      <span>{scorer.player_name}</span>
+                      <span>{scorer.team_name}</span>
+                      <span>{scorer.goals}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           )}

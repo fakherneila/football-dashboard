@@ -57,3 +57,57 @@ CREATE TABLE IF NOT EXISTS ai_reports (
 
 
 
+-- International Teams (FIFA)
+CREATE TABLE IF NOT EXISTS fifa_teams (
+    id INTEGER PRIMARY KEY,
+    name TEXT,
+    country_code TEXT,
+    fifa_ranking INTEGER,
+    ranking_points REAL,
+    confederation TEXT,  -- UEFA, CONMEBOL, CONCACAF, CAF, AFC, OFC
+    ranking_date TEXT
+);
+
+-- International Matches (World Cup, Qualifiers, Friendlies)
+CREATE TABLE IF NOT EXISTS international_matches (
+    id INTEGER PRIMARY KEY,
+    home_team_id INTEGER,
+    away_team_id INTEGER,
+    competition TEXT,  -- 'World Cup', 'World Cup Qualifier', 'Friendly', 'Nations League'
+    stage TEXT,        -- 'Group Stage', 'Round of 16', 'Quarter-final', 'Semi-final', 'Final'
+    match_date TEXT,
+    status TEXT,       -- 'scheduled', 'live', 'finished'
+    home_score INTEGER,
+    away_score INTEGER,
+    venue TEXT,
+    attendance INTEGER,
+    FOREIGN KEY(home_team_id) REFERENCES fifa_teams(id),
+    FOREIGN KEY(away_team_id) REFERENCES fifa_teams(id)
+);
+
+-- World Cup Groups (for current tournament)
+CREATE TABLE IF NOT EXISTS world_cup_groups (
+    id INTEGER PRIMARY KEY,
+    group_name TEXT,   -- 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'
+    team_id INTEGER,
+    played INTEGER,
+    wins INTEGER,
+    draws INTEGER,
+    losses INTEGER,
+    goals_for INTEGER,
+    goals_against INTEGER,
+    points INTEGER,
+    FOREIGN KEY(team_id) REFERENCES fifa_teams(id)
+);
+
+-- Top Scorers (World Cup / International)
+CREATE TABLE IF NOT EXISTS international_top_scorers (
+    id INTEGER PRIMARY KEY,
+    player_name TEXT,
+    team_id INTEGER,
+    goals INTEGER,
+    competition TEXT,  -- 'World Cup 2026', 'Qualifiers', etc.
+    assists INTEGER,
+    matches_played INTEGER,
+    FOREIGN KEY(team_id) REFERENCES fifa_teams(id)
+);
