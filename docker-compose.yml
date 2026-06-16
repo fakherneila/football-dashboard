@@ -1,0 +1,72 @@
+
+services:
+  # ============ BACKEND ============
+  backend:
+    build: ./backend
+    container_name: football-backend
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - FOOTBALL_DATA_API_KEY=${FOOTBALL_DATA_API_KEY}
+    volumes:
+      - ./backend/data:/app/data
+      - ./backend/football.db:/app/football.db
+    networks:
+      - football-network
+
+  # ============ FRONTEND ============
+  frontend:
+    build: ./frontend
+    container_name: football-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - football-network
+
+  # ============ n8n AUTOMATION ============
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: football-n8n
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_HOST=localhost
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - WEBHOOK_URL=http://localhost:5678/
+      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY:-your-encryption-key-here}
+      - DB_TYPE=sqlite
+      - DB_SQLITE_DATABASE=/home/node/.n8n/database.sqlite
+    volumes:
+      - n8n_data:/home/node/.n8n
+    networks:
+      - football-network
+
+  # ============ REDIS (for n8n queue mode - optional) ============
+  # Uncomment if you need queue mode for n8n
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: football-redis
+  #   restart: unless-stopped
+  #   ports:
+  #     - "6379:6379"
+  #   volumes:
+  #     - redis_data:/data
+  #   networks:
+  #     - football-network
+
+networks:
+  football-network:
+    driver: bridge
+
+volumes:
+  n8n_data:
+  # redis_data:

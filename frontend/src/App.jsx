@@ -11,8 +11,10 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import "./App.css";
+import LiveMatchTracker from "./components/LiveMatchTracker";
+import WorldCupCalendar from "./components/WorldCupCalendar";
 
-const API_BASE = "http://localhost:3001/api";
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:3001/api";
 
 const LEAGUES = [
   { id: 39, name: "Premier League", color: "#2563EB" },
@@ -160,6 +162,18 @@ function App() {
           >
             World Cup
           </button>
+          <button
+            className={activeTab === "live" ? "active" : ""}
+            onClick={() => setActiveTab("live")}
+          >
+            Live
+          </button>
+          <button
+            className={activeTab === "calendar" ? "active" : ""}
+            onClick={() => setActiveTab("calendar")}
+          >
+            Calendar
+          </button>
         </div>
 
         <div className="content">
@@ -274,7 +288,7 @@ function App() {
                           {teams.map((team) => (
                             <tr key={team.team_id}>
                               <td>{team.team_name}</td>
-                              <td>{team.points}</td>
+                              <td className="pts">{team.points}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -310,6 +324,18 @@ function App() {
                   ))}
                 </div>
               </div>
+            </div>
+          )}
+
+          {!loading && !error && activeTab === "live" && (
+            <div className="live-panel">
+              <LiveMatchTracker />
+            </div>
+          )}
+
+          {!loading && !error && activeTab === "calendar" && (
+            <div className="calendar-panel">
+              <WorldCupCalendar />
             </div>
           )}
         </div>
