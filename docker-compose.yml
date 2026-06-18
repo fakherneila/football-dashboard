@@ -31,6 +31,7 @@ services:
       - football-network
 
   # ============ n8n AUTOMATION ============
+ services:
   n8n:
     image: n8nio/n8n:latest
     container_name: football-n8n
@@ -38,13 +39,9 @@ services:
     ports:
       - "5678:5678"
     environment:
-      - N8N_HOST=localhost
-      - N8N_PORT=5678
-      - N8N_PROTOCOL=http
-      - WEBHOOK_URL=http://localhost:5678/
-      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY:-your-encryption-key-here}
-      - DB_TYPE=sqlite
-      - DB_SQLITE_DATABASE=/home/node/.n8n/database.sqlite
+      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}
+      - N8N_SECURE_COOKIE=false
+      - N8N_USER_FOLDER=/home/node/.n8n
     volumes:
       - n8n_data:/home/node/.n8n
     networks:
